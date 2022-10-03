@@ -4,7 +4,7 @@ public class Product {
     private final int price;
     int inBasket = 0;
 
-    public Product(String name, int price, int inBascet){
+    public Product(String name, int price, int inBascet) {
         this.name = name;
         this.price = price;
         this.inBasket = inBascet;
@@ -15,17 +15,18 @@ public class Product {
         this.price = price;
     }
 
-    public String getName(){
+    public String getName() {
         return name;
     }
 
-    public int getPrice(){
+    public int getPrice() {
         return price;
     }
 
-    public int getInBasket(){
+    public int getInBasket() {
         return inBasket;
     }
+
     public void sumInBasket(int sum) {
         this.inBasket += sum;
     }

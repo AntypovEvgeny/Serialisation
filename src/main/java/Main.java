@@ -1,7 +1,14 @@
+import org.w3c.dom.*;
+import org.xml.sax.SAXException;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.text.ParseException;
 import java.util.Scanner;
+
 
 public class Main {
 
@@ -11,18 +18,62 @@ public class Main {
             new Product("Молоко", 300)
     };
 
-    public static void main(String[] args) throws FileNotFoundException, ParseException {
+    private static boolean basketLoadEnable = false;
+    private static String basketLoadFileName = "";
+    private static FileFormat basketLoadFormat = FileFormat.JSON;
+
+    private static boolean basketSaveEnable = false;
+    private static String basketSaveFileName = "";
+    private static FileFormat basketSaveFormat = FileFormat.JSON;
+
+    private static boolean logSaveEnable = false;
+    private static String logFileName = "";
+
+    public static void main(String[] args) throws IOException, ParserConfigurationException, SAXException, ParseException {
+
         Basket card;
         int productNumber;
         int productCount;
+        String nodeName;
+        String parameterName;
+        String parameterValue;
 
         Scanner scanner = new Scanner(System.in);
+        ClientLog clientLog = new ClientLog();
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new File("shop.xml"));
+        Node root = doc.getDocumentElement();
+        NodeList nodeList = root.getChildNodes();
+        for (int i = 0; i < nodeList.getLength(); i++) {
+            Node currentNode = nodeList.item(i);
+            if (Node.ELEMENT_NODE == currentNode.getNodeType()) {
+                nodeName = currentNode.getNodeName();
+                NodeList map = currentNode.getChildNodes();
+                for (int a = 0; a < map.getLength(); a++) {
+                    Node parameter = map.item(a);
+                    if (Node.ELEMENT_NODE == parameter.getNodeType()) {
+                        parameterName = parameter.getNodeName();
+                        parameterValue = parameter.getNodeValue();
+                        setParameters(nodeName, parameterName, parameterValue);
+                    }
 
-        File basketFile = new File("basket.txt");
-        if (basketFile.exists()) {
+                }
+            }
+        }
+
+        File basketFileForLoad = new File(basketLoadFileName);
+        File basketFileForSave = new File(basketSaveFileName);
+        File logFile = new File(logFileName);
+
+        if (basketFileForLoad.exists() && basketLoadEnable) {
             System.out.println("Загрузить корзину(нажмите enter)? ");
             if (scanner.nextLine().equals("")) {
-                card = Basket.loadFromTxtFile(basketFile);
+                if (basketLoadFormat == FileFormat.JSON) {
+                    card = Basket.loadFromJson(basketFileForLoad);
+                } else {
+                    card = Basket.loadFromTxtFile(basketFileForLoad);
+                }
             } else {
                 card = new Basket(product);
             }
@@ -52,18 +103,64 @@ public class Main {
                         continue;
                     }
                     card.addToCart(productNumber - 1, productCount);
-                    card.saveTxt(basketFile);
+                    if (basketSaveEnable) {
+                        if (basketSaveFormat == FileFormat.JSON) {
+                            card.saveJson(basketFileForSave);
+                        }
+                        if (basketSaveFormat == FileFormat.TXT) {
+                            card.saveTxt(basketFileForSave);
+                        }
+                    }
+                    clientLog.log(productNumber - 1, productCount);
                 } catch (NumberFormatException nfe) {
                     System.out.println("Необходимо указать два целых числа");
-                } catch (FileNotFoundException e) {
-                    throw new RuntimeException(e);
                 }
             } else if (inputString.equals("end")) {
                 break;
             }
             System.out.println("Укажите следующую пару чисел");
         }
+        if (logSaveEnable) {
+            clientLog.exportAsCSV(logFile);
+        }
         scanner.close();
         card.printCart();
+    }
+
+    private static void setParameters(String nodeName, String parameterName, String parameterValue) {
+        if (nodeName.equals("load")) {
+            if (parameterName.equals("enabled")) {
+                basketLoadEnable = parameterValue.equals("true");
+            }
+            if (parameterName.equals("fileName")) {
+                basketLoadFileName = parameterValue;
+            }
+            if (parameterName.equals("format")) {
+                if (parameterValue.equals("json")) {
+                    basketLoadFormat = FileFormat.JSON;
+                } else basketLoadFormat = FileFormat.TXT;
+            }
+        }
+        if (nodeName.equals("save")) {
+            if (parameterName.equals("enabled")) {
+                basketSaveEnable = parameterValue.equals("true");
+            }
+            if (parameterName.equals("fileName")) {
+                basketSaveFileName = parameterValue;
+            }
+            if (parameterName.equals("format")) {
+                basketSaveFormat = FileFormat.JSON;
+            } else {
+                basketSaveFormat = FileFormat.TXT;
+            }
+        }
+        if (nodeName.equals("log")) {
+            if (parameterName.equals("enabled")) {
+                logSaveEnable = parameterValue.equals("true");
+            }
+            if (parameterName.equals("fileName")) {
+                logFileName = parameterValue;
+            }
+        }
     }
 }
