@@ -1,12 +1,4 @@
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.PrintWriter;
-import java.text.NumberFormat;
-import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-import java.util.stream.Stream;
+import java.io.*;
 
 public class Basket {
 
@@ -35,28 +27,21 @@ public class Basket {
         System.out.println("Итого " + sumProduct + " руб.");
     }
 
-    public void saveTxt(File textFile) throws FileNotFoundException {
-        try (PrintWriter out = new PrintWriter(textFile)) {
-            Stream.of(product).forEach(p ->
-                    out.printf(p.getName(), p.getPrice(), p.getInBasket()));
+    public void saveBin(File file) {
+        try (FileOutputStream fos = new FileOutputStream(file);
+             ObjectOutputStream oos = new ObjectOutputStream(fos)) {
+            oos.writeObject(this);
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
         }
     }
 
-    public static Basket loadFromTxtFile(File textFile) throws FileNotFoundException, ParseException {
-        try(Scanner scanner = new Scanner(textFile)) {
-            List<Product> product = new ArrayList<>();
-            String name;
-            int price;
-            int inBasket;
-            NumberFormat nf = NumberFormat.getInstance();
-            while (scanner.hasNext()) {
-                String[] parts = scanner.nextLine().split(" ");
-                name = parts[0];
-                price = nf.parse(parts[1]).intValue();
-                inBasket = Integer.parseInt(parts[2]);
-                product.add(new Product(name, price, inBasket));
-            }
-            return new Basket(product.toArray(Product[]::new));
+    public static void loadFromBinFile(File file){
+        try (FileInputStream fis = new FileInputStream(file);
+             ObjectInputStream ois = new ObjectInputStream(fis)) {
+            ois.readObject();
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
         }
     }
 }
